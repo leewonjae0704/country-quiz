@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>세계 수도 맞히기 퀴즈</title>
+    <style>
+        :root {
+            --primary: #4a90e2;
+            --success: #2ecc71;
+            --danger: #e74c3c;
+            --bg: #f5f7fa;
+            --card-bg: #ffffff;
+            --text: #2c3e50;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            padding: 30px;
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            margin-top: 0;
+            font-size: 24px;
+            color: #1a2a3a;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            color: #7f8c8d;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .question-box {
+            font-size: 22px;
+            margin: 30px 0;
+            font-weight: 600;
+        }
+
+        .question-box span {
+            color: var(--primary);
+            font-size: 28px;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 14px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-option {
+            background-color: #ecf0f1;
+            color: var(--text);
+            border: 2px solid transparent;
+        }
+
+        .btn-option:hover:not(:disabled) {
+            background-color: #bdc3c7;
+        }
+
+        .feedback {
+            height: 24px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .feedback.correct { color: var(--success); }
+        .feedback.wrong { color: var(--danger); }
+
+        .score-display {
+            font-size: 48px;
+            font-weight: bold;
+            color: var(--primary);
+            margin: 20px 0;
+        }
+
+        .btn-restart {
+            background-color: var(--primary);
+            color: white;
+            width: 100%;
+            margin-top: 15px;
+        }
+        .btn-restart:hover {
+            background-color: #357abd;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <!-- 퀴즈 게임 화면 -->
+        <div id="screen-game">
+            <h1>🌍 단계별 수도 맞히기 퀴즈</h1>
+            <div class="status-bar">
+                <span id="display-level">레벨: 쉬움🟢</span>
+                <span id="display-progress">문제: 1 / 10</span>
+            </div>
+            <div class="question-box">
+                <span id="display-country">대한민국</span>의 수도는?
+            </div>
+            <div class="options-grid" id="options-container"></div>
+            <div id="display-feedback" class="feedback"></div>
+        </div>
+
+        <!-- 게임 결과 화면 -->
+        <div id="screen-result" class="hidden">
+            <h1>🎉 퀴즈 종료!</h1>
+            <p>당신의 최종 점수는?</p>
+            <div class="score-display"><span id="display-score">0</span> / 10</div>
+            <p id="result-comment">훌륭합니다!</p>
+            <button class="btn-restart" onclick="restartGame()">다시 시작하기</button>
+        </div>
+    </div>
+
+    <script>
+        // 난이도별 풀 데이터
+        const poolEasy = [
+            { country: "대한민국", capital: "서울", opposites: ["도쿄", "베이징", "워싱턴 D.C."] },
+            { country: "일본", capital: "도쿄", opposites: ["서울", "오사카", "교토"] },
+            { country: "중국", capital: "베이징", opposites: ["상하이", "홍콩", "타이베이"] },
+            { country: "미국", capital: "워싱턴 D.C.", opposites: ["뉴욕", "로스앤젤레스", "시카고"] },
+            { country: "영국", capital: "런던", opposites: ["파리", "베를린", "에든버러"] },
+            { country: "프랑스", capital: "파리", opposites: ["리옹", "마르세유", "로마"] }
+        ];
+
+        const poolNormal = [
+            { country: "캐나다", capital: "오타와", opposites: ["토론토", "밴쿠버", "몬트리올"] },
+            { country: "호주", capital: "캔버라", opposites: ["시드니", "멜버른", "브리즈번"] },
+            { country: "브라질", capital: "브라질리아", opposites: ["리우데자네이루", "상파울루", "부엔오스아이레스"] },
+            { country: "터키(튀르키예)", capital: "앙카라", opposites: ["이스탄불", "안탈리아", "아테네"] },
+            { country: "이집트", capital: "카이로", opposites: ["알렉산드리아", "루크소르", "수아킨"] }
+        ];
+
+        const poolHard = [
+            { country: "루마니아", capital: "부쿠레슈티", opposites: ["부다페스트", "소피아", "베오그라드"] },
+            { country: "에티오피아", capital: "아디스아바바", opposites: ["나이로비", "하르툼", "지부티"] },
+            { country: "아이슬란드", capital: "레이카비크", opposites: ["오슬로", "헬싱키", "코펜하겐"] }
+        ];
+
+        let currentQuestions = [];
+        let currentIndex = 0;
+        let score = 0;
+        const totalQuizCount = 10;
+
+        function initGame() {
+            score = 0;
+            currentIndex = 0;
+
+            // 셔플 후 조건에 맞는 문제 조합 추출 (쉬움 4개, 보통 3개, 어려움 3개 = 총 10개)
+            const easyShuffled = [...poolEasy].sort(() => 0.5 - Math.random()).slice(0, 4);
+            const normalShuffled = [...poolNormal].sort(() => 0.5 - Math.random()).slice(0, 3);
+            const hardShuffled = [...poolHard].sort(() => 0.5 - Math.random()).slice(0, 3);
+
+            currentQuestions = [...easyShuffled, ...normalShuffled, ...hardShuffled];
+
+            document.getElementById('screen-game').classList.remove('hidden');
+            document.getElementById('screen-result').classList.add('hidden');
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            const feedback = document.getElementById('display-feedback');
+            feedback.textContent = '';
+            feedback.className = 'feedback';
+
+            // 현재 진행 문항에 따른 상단 난이도 상태 바 업데이트
+            const levelIndicator = document.getElementById('display-level');
+            if (currentIndex < 4) {
+                levelIndicator.textContent = "레벨: 쉬움🟢";
+            } else if (currentIndex < 7) {
+                levelIndicator.textContent = "레벨: 보통🟡";
+            } else {
+                levelIndicator.textContent = "레벨: 어려움🔴";
+            }
+
+            document.getElementById('display-progress').textContent = `문제: ${currentIndex + 1} / ${totalQuizCount}`;
+
+            const currentQ = currentQuestions[currentIndex];
+            document.getElementById('display-country').textContent = currentQ.country;
+
+            const options = [currentQ.capital, ...currentQ.opposites].sort(() => 0.5 - Math.random());
+
+            const container = document.getElementById('options-container');
+            container.innerHTML = '';
+
+            options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'btn-option';
+                btn.textContent = opt;
+                btn.onclick = () => checkAnswer(opt, currentQ.capital, btn);
+                container.appendChild(btn);
+            });
+        }
+
+        function checkAnswer(selected, correct, clickedBtn) {
+            const buttons = document.querySelectorAll('.btn-option');
+            buttons.forEach(btn => btn.disabled = true);
+
+            const feedback = document.getElementById('display-feedback');
+
+            if (selected === correct) {
+                score++;
+                feedback.textContent = "⭕ 정답입니다!";
+                feedback.className = "feedback correct";
+                clickedBtn.style.backgroundColor = "var(--success)";
+                clickedBtn.style.color = "white";
+            } else {
+                feedback.textContent = `❌ 틀렸습니다! 정답은 [${correct}]입니다.`;
+                feedback.className = "feedback wrong";
+                clickedBtn.style.backgroundColor = "var(--danger)";
+                clickedBtn.style.color = "white";
+                
+                buttons.forEach(btn => {
+                    if(btn.textContent === correct) {
+                        btn.style.backgroundColor = "var(--success)";
+                        btn.style.color = "white";
+                    }
+                });
+            }
+
+            setTimeout(() => {
+                currentIndex++;
+                if (currentIndex < totalQuizCount) {
+                    loadQuestion();
+                } else {
+                    showResult();
+                }
+            }, 1500);
+        }
+
+        function showResult() {
+            document.getElementById('screen-game').classList.add('hidden');
+            document.getElementById('screen-result').classList.remove('hidden');
+            
+            document.getElementById('display-score').textContent = score;
+            
+            const comment = document.getElementById('result-comment');
+            if (score === totalQuizCount) comment.textContent = "💯 대단합니다! 레이카비크까지 정복한 수도 마스터!";
+            else if (score >= 7) comment.textContent = "👍 대단해요! 어려운 문제도 상당수 맞히셨군요.";
+            else if (score >= 4) comment.textContent = "🎵 보통 난이도 단계까지 무난하게 통과하셨네요!";
+            else comment.textContent = "📁 아쉽습니다. 기본기를 더 닦아서 다시 도전해볼까요?";
+        }
+
+        function restartGame() {
+            initGame();
+        }
+
+        window.onload = initGame;
+    </script>
+</body>
+</html>
